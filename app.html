@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت سرمایه و مالی</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <button class="menu-button" onclick="openMenuDrawer()">☰</button>
+                <div>
+                    <h1>💎 مدیریت سرمایه و مالی</h1>
+                    <p id="userWelcome">مدیریت هوشمند سرمایه‌گذاری و امور مالی</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="user-badge" onclick="openUserMenu()">
+                    <span>👤</span>
+                    <span id="currentUserName">کاربر</span>
+                </div>
+                <div class="notification-bell" onclick="toggleNotifications()">
+                    🔔
+                    <span class="notification-badge" id="notifCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification Panel -->
+        <div class="notification-panel" id="notificationPanel">
+            <div class="notification-header">
+                <h3>اعلان‌ها</h3>
+                <button class="close-notif" onclick="toggleNotifications()">×</button>
+            </div>
+            <div id="notificationList"></div>
+        </div>
+
+        <!-- Menu Drawer -->
+        <div class="menu-drawer" id="menuDrawer">
+            <div class="menu-header">
+                <h3>منو</h3>
+                <button class="close-menu" onclick="closeMenuDrawer()">×</button>
+            </div>
+            <div class="menu-items">
+                <div class="menu-item" onclick="openNotes()">
+                    📝 یادداشت‌ها
+                </div>
+                <div class="menu-item" onclick="openSupport()">
+                    💬 تماس با پشتیبانی
+                </div>
+                <div class="menu-item" onclick="openAbout()">
+                    ℹ️ درباره ما
+                </div>
+                <div class="menu-item" onclick="openUserMenu()">
+                    👤 حساب کاربری
+                </div>
+                <div class="menu-item" style="color: var(--accent-red);" onclick="logout()">
+                    🚪 خروج
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="app-content"></div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-items">
+            <div class="nav-item active" onclick="navigateTo('market')" data-view="market">
+                <div class="nav-icon">📊</div>
+                <div>بازار</div>
+            </div>
+            <div class="nav-item" onclick="navigateTo('assets')" data-view="assets">
+                <div class="nav-icon">💰</div>
+                <div>دارایی</div>
+            </div>
+            <div class="nav-item" onclick="navigateTo('portfolio')" data-view="portfolio">
+                <div class="nav-icon">📈</div>
+                <div>پورتفولیو</div>
+            </div>
+            <div class="nav-item" onclick="navigateTo('transactions')" data-view="transactions">
+                <div class="nav-icon">💳</div>
+                <div>تراکنش</div>
+            </div>
+            <div class="nav-item" onclick="navigateTo('projects')" data-view="projects">
+                <div class="nav-icon">📋</div>
+                <div>پروژه</div>
+            </div>
+            <div class="nav-item" onclick="navigateTo('installments')" data-view="installments">
+                <div class="nav-icon">💰</div>
+                <div>اقساط</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Asset Modal -->
+    <div id="addAssetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">افزودن دارایی</div>
+                <button class="close-modal" onclick="closeModal('addAssetModal')">×</button>
+            </div>
+            <form id="addAssetForm" onsubmit="addAsset(event)">
+                <div class="form-group">
+                    <label class="form-label">نوع دارایی *</label>
+                    <select class="form-select" id="assetType" required onchange="updateAssetForm()">
+                        <option value="">انتخاب کنید</option>
+                        <option value="crypto">ارز دیجیتال</option>
+                        <option value="currency">ارز</option>
+                        <option value="gold">طلا</option>
+                        <option value="stock">سهام</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">نام دارایی *</label>
+                    <select class="form-select" id="assetName" required disabled onchange="updateAssetPrice()">
+                        <option value="">ابتدا نوع را انتخاب کنید</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">مقدار *</label>
+                        <input type="number" step="0.00001" class="form-input" id="assetAmount" required oninput="calculateTomanValue()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">قیمت خرید (تومان) *</label>
+                        <input type="number" class="form-input" id="assetBuyPrice" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">قیمت فعلی</label>
+                    <input type="text" class="form-input" id="assetCurrentPrice" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">معادل تومان (قیمت فعلی)</label>
+                    <input type="text" class="form-input" id="assetTomanValue" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="assetNotes"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ذخیره دارایی</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div id="addTransactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">افزودن تراکنش</div>
+                <button class="close-modal" onclick="closeModal('addTransactionModal')">×</button>
+            </div>
+            <form id="addTransactionForm" onsubmit="addTransaction(event)">
+                <div class="form-group">
+                    <label class="form-label">نوع تراکنش *</label>
+                    <select class="form-select" id="transactionType" required onchange="updateTransactionForm()">
+                        <option value="income">درآمد</option>
+                        <option value="expense">هزینه</option>
+                        <option value="transfer">کارت به کارت</option>
+                    </select>
+                </div>
+                <div class="form-group hidden" id="transferDirectionGroup">
+                    <label class="form-label">جهت انتقال *</label>
+                    <select class="form-select" id="transferDirection">
+                        <option value="in">دریافت شده</option>
+                        <option value="out">پرداخت شده</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">عنوان *</label>
+                    <input type="text" class="form-input" id="transactionTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">مبلغ (تومان) *</label>
+                    <input type="number" class="form-input" id="transactionAmount" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">دسته‌بندی *</label>
+                    <select class="form-select" id="transactionCategory" required>
+                        <option value="food">خوراک و نوشیدنی</option>
+                        <option value="transport">حمل و نقل</option>
+                        <option value="shopping">خرید</option>
+                        <option value="bills">قبوض</option>
+                        <option value="entertainment">سرگرمی</option>
+                        <option value="health">بهداشت و درمان</option>
+                        <option value="education">آموزش</option>
+                        <option value="salary">حقوق</option>
+                        <option value="investment">سرمایه‌گذاری</option>
+                        <option value="other">سایر</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">تاریخ *</label>
+                    <input type="date" class="form-input" id="transactionDate" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="transactionNotes"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ذخیره تراکنش</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Asset Modal -->
+    <div id="editAssetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">ویرایش دارایی</div>
+                <button class="close-modal" onclick="closeModal('editAssetModal')">×</button>
+            </div>
+            <form id="editAssetForm" onsubmit="updateAsset(event)">
+                <input type="hidden" id="editAssetId">
+                <div class="form-group">
+                    <label class="form-label">مقدار جدید *</label>
+                    <input type="number" step="0.00001" class="form-input" id="editAssetAmount" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">قیمت خرید (تومان) *</label>
+                    <input type="number" class="form-input" id="editAssetBuyPrice" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="editAssetNotes"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">بروزرسانی</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteAssetConfirm()" style="flex: 1;">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Transaction Modal -->
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">ویرایش تراکنش</div>
+                <button class="close-modal" onclick="closeModal('editTransactionModal')">×</button>
+            </div>
+            <form id="editTransactionForm" onsubmit="updateTransaction(event)">
+                <input type="hidden" id="editTransactionId">
+                <div class="form-group">
+                    <label class="form-label">عنوان *</label>
+                    <input type="text" class="form-input" id="editTransactionTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">مبلغ (تومان) *</label>
+                    <input type="number" class="form-input" id="editTransactionAmount" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">دسته‌بندی *</label>
+                    <select class="form-select" id="editTransactionCategory" required>
+                        <option value="food">خوراک و نوشیدنی</option>
+                        <option value="transport">حمل و نقل</option>
+                        <option value="shopping">خرید</option>
+                        <option value="bills">قبوض</option>
+                        <option value="entertainment">سرگرمی</option>
+                        <option value="health">بهداشت و درمان</option>
+                        <option value="education">آموزش</option>
+                        <option value="salary">حقوق</option>
+                        <option value="investment">سرمایه‌گذاری</option>
+                        <option value="other">سایر</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="editTransactionNotes"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">بروزرسانی</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteTransactionConfirm()" style="flex: 1;">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Project Modal -->
+    <div id="addProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">افزودن پروژه</div>
+                <button class="close-modal" onclick="closeModal('addProjectModal')">×</button>
+            </div>
+            <form id="addProjectForm" onsubmit="addProject(event)">
+                <div class="form-group">
+                    <label class="form-label">عنوان پروژه *</label>
+                    <input type="text" class="form-input" id="projectTitle" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">مبلغ کل (تومان) *</label>
+                        <input type="number" class="form-input" id="projectTotalAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">پرداخت شده (تومان)</label>
+                        <input type="number" class="form-input" id="projectPaidAmount" value="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">تاریخ شروع</label>
+                        <input type="date" class="form-input" id="projectStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">تاریخ پایان</label>
+                        <input type="date" class="form-input" id="projectEndDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="projectNotes"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ذخیره پروژه</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div id="editProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">ویرایش پروژه</div>
+                <button class="close-modal" onclick="closeModal('editProjectModal')">×</button>
+            </div>
+            <form id="editProjectForm" onsubmit="updateProject(event)">
+                <input type="hidden" id="editProjectId">
+                <div class="form-group">
+                    <label class="form-label">عنوان پروژه *</label>
+                    <input type="text" class="form-input" id="editProjectTitle" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">مبلغ کل (تومان) *</label>
+                        <input type="number" class="form-input" id="editProjectTotalAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">پرداخت شده (تومان)</label>
+                        <input type="number" class="form-input" id="editProjectPaidAmount">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">وضعیت</label>
+                    <select class="form-select" id="editProjectStatus">
+                        <option value="active">در حال انجام</option>
+                        <option value="completed">تکمیل شده</option>
+                        <option value="cancelled">لغو شده</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="editProjectNotes"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">بروزرسانی</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteProjectConfirm()" style="flex: 1;">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Installment Modal -->
+    <div id="addInstallmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">افزودن قسط</div>
+                <button class="close-modal" onclick="closeModal('addInstallmentModal')">×</button>
+            </div>
+            <form id="addInstallmentForm" onsubmit="addInstallment(event)">
+                <div class="form-group">
+                    <label class="form-label">عنوان *</label>
+                    <input type="text" class="form-input" id="installmentTitle" required placeholder="مثال: وام مسکن">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">مبلغ کل (تومان) *</label>
+                        <input type="number" class="form-input" id="installmentTotalAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">مبلغ ماهانه (تومان) *</label>
+                        <input type="number" class="form-input" id="installmentMonthlyAmount" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">تعداد اقساط *</label>
+                        <input type="number" class="form-input" id="installmentTotalCount" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">روز سررسید (1-31) *</label>
+                        <input type="number" class="form-input" id="installmentDueDay" required min="1" max="31">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">تاریخ شروع *</label>
+                        <input type="date" class="form-input" id="installmentStartDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">تاریخ پایان *</label>
+                        <input type="date" class="form-input" id="installmentEndDate" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="installmentNotes"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ذخیره قسط</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Installment Modal -->
+    <div id="editInstallmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">ویرایش قسط</div>
+                <button class="close-modal" onclick="closeModal('editInstallmentModal')">×</button>
+            </div>
+            <form id="editInstallmentForm" onsubmit="updateInstallment(event)">
+                <input type="hidden" id="editInstallmentId">
+                <div class="form-group">
+                    <label class="form-label">عنوان *</label>
+                    <input type="text" class="form-input" id="editInstallmentTitle" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">توضیحات</label>
+                    <textarea class="form-textarea" id="editInstallmentNotes"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">بروزرسانی</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteInstallmentConfirm()" style="flex: 1;">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Target Portfolio Modal -->
+    <div id="targetPortfolioModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">تنظیم پورتفولیو هدف</div>
+                <button class="close-modal" onclick="closeModal('targetPortfolioModal')">×</button>
+            </div>
+            <form id="targetPortfolioForm" onsubmit="saveTargetPortfolio(event)">
+                <div class="form-group">
+                    <label class="form-label">هدف ارز دیجیتال (تومان)</label>
+                    <input type="number" class="form-input" id="targetCrypto" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">هدف ارز (تومان)</label>
+                    <input type="number" class="form-input" id="targetCurrency" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">هدف طلا (تومان)</label>
+                    <input type="number" class="form-input" id="targetGold" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">هدف سهام (تومان)</label>
+                    <input type="number" class="form-input" id="targetStock" placeholder="0">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ذخیره اهداف</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Menu Modal -->
+    <div id="userMenuModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">حساب کاربری</div>
+                <button class="close-modal" onclick="closeModal('userMenuModal')">×</button>
+            </div>
+            <div class="user-info-card">
+                <div class="user-avatar">👤</div>
+                <div class="user-details">
+                    <h3 id="userFullname">-</h3>
+                    <p id="userEmail">-</p>
+                    <p id="userUsername">-</p>
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="btn btn-danger" onclick="logout()" style="width: 100%;">خروج از حساب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Modal -->
+    <div id="notesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📝 یادداشت‌ها</div>
+                <button class="close-modal" onclick="closeModal('notesModal')">×</button>
+            </div>
+            <div id="notesList">
+                <div class="loading">در حال بارگذاری...</div>
+            </div>
+            <div style="margin-top: 20px;">
+                <textarea class="form-textarea" id="newNoteText" placeholder="یادداشت جدید..."></textarea>
+                <button class="btn btn-primary" onclick="addNote()" style="width: 100%; margin-top: 10px;">+ افزودن یادداشت</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support Modal -->
+    <div id="supportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">💬 تماس با پشتیبانی</div>
+                <button class="close-modal" onclick="closeModal('supportModal')">×</button>
+            </div>
+            
+            <div class="tabs" style="margin-bottom: 20px;">
+                <div class="tab active" onclick="switchSupportTab('list', event)">تیکت‌های من</div>
+                <div class="tab" onclick="switchSupportTab('new', event)">تیکت جدید</div>
+            </div>
+            
+            <div id="ticketsList"></div>
+            
+            <div id="newTicketForm" class="hidden">
+                <form onsubmit="createTicket(event)">
+                    <div class="form-group">
+                        <label class="form-label">عنوان *</label>
+                        <input type="text" class="form-input" id="ticketTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">پیام *</label>
+                        <textarea class="form-textarea" id="ticketMessage" required rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">ارسال تیکت</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">ℹ️ درباره ما</div>
+                <button class="close-modal" onclick="closeModal('aboutModal')">×</button>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+                <h2 style="margin-bottom: 20px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); 
+                           -webkit-background-clip: text; -webkit-text-fill-color: transparent;">💎 مدیریت سرمایه و مالی</h2>
+                <p style="color: var(--text-secondary); line-height: 1.8; margin-bottom: 15px;">
+                    سیستم جامع مدیریت سرمایه‌گذاری و امور مالی شخصی با قابلیت‌های پیشرفته
+                </p>
+                <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 12px; margin: 20px 0;">
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">نسخه 2.0.0</p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">ساخته شده با ❤️</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app-client.js"></script>
+</body>
+</html>
